@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <link rel="icon" href="data:,">
+    <title>Product Card AI</title>
+    <style>
+        :root {
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            color: #1e293b;
+            background: #f4f6f9;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { margin: 0; }
+
+        button, textarea { font: inherit; }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            min-height: 0;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            gap: 14px;
+        }
+
+        .page-header { flex: none; }
+        h1 { margin: 0 0 4px; font-size: 24px; }
+        h2 { margin: 0; font-size: 18px; }
+        h3 { font-size: 14px; margin: 22px 0 8px; }
+        p { line-height: 1.6; }
+        .muted { color: #64748b; }
+        .subtitle { margin: 0; font-size: 13px; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 18px 10px;
+            flex: none;
+        }
+
+        .panel-header p {
+            font-size: 13px;
+            margin: 7px 0 0;
+        }
+
+        .editor-wrap {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            padding: 0 18px 12px;
+        }
+
+        label { font-size: 13px; font-weight: 600; margin: 0 0 7px; }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+            min-height: 0;
+            resize: none;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            color: #1e293b;
+            background: #fff;
+            font: 13px/1.55 Consolas, "Courier New", monospace;
+            overflow: auto;
+            tab-size: 2;
+        }
+
+        .panel-footer {
+            flex: none;
+            padding: 12px 18px 16px;
+            border-top: 1px solid #e2e8f0;
+            background: #fff;
+        }
+
+        .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        button {
+            padding: 9px 12px;
+            font-size: 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            color: #1e293b;
+            cursor: pointer;
+            transition: background .15s, color .15s, border-color .15s;
+        }
+
+        button:hover:not(:disabled) { background: #f1f5f9; }
+        button:disabled { opacity: .55; cursor: wait; }
+
+        button.primary { background: #2563eb; border-color: #2563eb; color: white; }
+        button.primary:hover:not(:disabled) { background: #1d4ed8; }
+        button.copied, button.copied:hover:not(:disabled) {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        button:focus-visible, textarea:focus-visible {
+            outline: 3px solid #93c5fd;
+            outline-offset: 2px;
+        }
+
+        .status { margin-top: 9px; font-size: 13px; color: #475569; }
+        .status.success { color: #15803d; }
+        .error {
+            max-height: 115px;
+            overflow: auto;
+            margin-top: 9px;
+            padding: 10px 12px;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            background: #fef2f2;
+            color: #991b1b;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .result-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 18px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            flex: none;
+        }
+
+        .result-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 10px 18px 22px;
+            scrollbar-gutter: stable;
+        }
+
+        .placeholder { margin: 15px 0; color: #64748b; font-size: 14px; }
+        .description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+        .counter { font-size: 12px; color: #64748b; margin-top: 4px; }
+        .warning {
+            margin: 8px 0;
+            padding: 10px 12px;
+            background: #fffbeb;
+            border-left: 3px solid #f59e0b;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .specs { width: 100%; border-collapse: collapse; }
+        .specs td {
+            padding: 9px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+        .specs td:first-child { width: 48%; color: #64748b; }
+        li { margin-bottom: 7px; line-height: 1.5; overflow-wrap: anywhere; }
+        [hidden] { display: none !important; }
+
+        @media (max-width: 850px), (max-height: 560px) {
+            .app { height: auto; min-height: 100dvh; }
+            .layout { grid-template-columns: 1fr; min-height: auto; }
+            .panel { min-height: 0; }
+            .editor-wrap { flex: none; }
+            textarea { height: 270px; min-height: 230px; resize: vertical; }
+            .result-scroll { max-height: 65dvh; }
+        }
+
+        @media (max-width: 480px) {
+            .app { padding: 12px; gap: 12px; }
+            h1 { font-size: 22px; }
+            .panel-header { padding: 14px 14px 10px; }
+            .editor-wrap { padding: 0 14px 12px; }
+            .panel-footer { padding: 12px 14px; }
+            .result-toolbar { padding: 0 14px 12px; }
+            .result-scroll { padding: 10px 14px 20px; }
+        }
+    </style>
+</head>
+<body>
+<main class="app">
+    <header class="page-header">
+        <h1>Product Card AI</h1>
+        <p class="subtitle muted">AI-помощник для подготовки товарных описаний контрольно-измерительных приборов</p>
+    </header>
+
+    <div class="layout">
+        <section class="panel" aria-labelledby="input-heading">
+            <div class="panel-header">
+                <h2 id="input-heading">Входные данные</h2>
+                <p class="muted">Вставьте JSON с названием, производителем, характеристиками и описанием прибора.</p>
+            </div>
+            <div class="editor-wrap">
+                <label for="product-input">JSON товара</label>
+                <textarea id="product-input" spellcheck="false" placeholder='{"name": "Манометр DM 02"}'></textarea>
+            </div>
+            <div class="panel-footer">
+                <div class="actions">
+                    <button type="button" class="primary" id="generate-btn">Сгенерировать</button>
+                    <button type="button" id="example-btn">Загрузить пример</button>
+                </div>
+                <div id="status" class="status" role="status" aria-live="polite"></div>
+                <div id="error" class="error" role="alert" hidden></div>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="output-heading">
+            <div class="panel-header">
+                <h2 id="output-heading">Карточка товара</h2>
+                <p class="muted">Результат генерации и варианты копирования</p>
+            </div>
+            <div class="result-toolbar" id="copy-toolbar" hidden>
+                <button type="button" id="copy-text-btn">Копировать текст</button>
+                <button type="button" id="copy-md-btn">Копировать Markdown</button>
+                <button type="button" id="copy-json-btn">Копировать JSON</button>
+            </div>
+            <div class="result-scroll">
+                <p id="placeholder" class="placeholder">Результат генерации появится здесь.</p>
+                <div id="result" hidden>
+                    <div id="warnings"></div>
+                    <h3>SEO-заголовок</h3>
+                    <p id="seo-title" class="description"></p>
+                    <div id="title-counter" class="counter"></div>
+                    <h3>SEO-описание</h3>
+                    <p id="seo-description" class="description"></p>
+                    <div id="description-counter" class="counter"></div>
+                    <h3>Ключевые характеристики</h3>
+                    <table class="specs"><tbody id="specifications"></tbody></table>
+                    <h3>Поисковые запросы</h3>
+                    <ul id="search-queries"></ul>
+                    <h3>Коммерческий блок</h3>
+                    <p id="commercial-block" class="description"></p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<script>
+    "use strict";
+
+    const API_URL = "/api/v1/cards/generate";
+    const $ = (id) => document.getElementById(id);
+
+    const exampleProduct = {
+        name: "Манометр показывающий DM 02",
+        manufacturer: "Манотомь",
+        specs: {
+            "диапазон измерений": "0–1,6 МПа",
+            "класс точности": "1,5",
+            "присоединение": "G1/2",
+            "диаметр корпуса": "100 мм"
+        },
+        description: "Прибор предназначен для измерения избыточного давления."
+    };
+
+    const copyLabels = {
+        text: "Копировать текст",
+        markdown: "Копировать Markdown",
+        json: "Копировать JSON"
+    };
+    const copyButtonIds = {
+        text: "copy-text-btn",
+        markdown: "copy-md-btn",
+        json: "copy-json-btn"
+    };
+    const copyTimers = new Map();
+
+    let currentCard = null;
+    let isGenerating = false;
+
+    function setStatus(message, success = false) {
+        const element = $("status");
+        element.textContent = message;
+        element.classList.toggle("success", success);
+    }
+
+    function hideError() {
+        $("error").hidden = true;
+        $("error").textContent = "";
+    }
+
+    function showError(message) {
+        $("error").textContent = message;
+        $("error").hidden = false;
+        setStatus("");
+    }
+
+    function resetCopyButtons() {
+        for (const [format, id] of Object.entries(copyButtonIds)) {
+            clearTimeout(copyTimers.get(format));
+            $(id).textContent = copyLabels[format];
+            $(id).classList.remove("copied");
+        }
+        copyTimers.clear();
+    }
+
+    function clearResult() {
+        currentCard = null;
+        $("result").hidden = true;
+        $("placeholder").hidden = false;
+        $("copy-toolbar").hidden = true;
+        resetCopyButtons();
+        hideError();
+        setStatus("");
+    }
+
+    function formatError(status, detail) {
+        if (status === 422) {
+            if (detail && !Array.isArray(detail) &&
+                Array.isArray(detail.missing_fields)) {
+                const reasons = detail.missing_fields
+                    .map((item) => item.reason)
+                    .filter(Boolean);
+
+                return [
+                    "Недостаточно данных для создания карточки.",
+                    ...reasons.map((reason) => `• ${reason}`)
+                ].join("\n");
+            }
+
+            return "Проверьте данные товара: обязательные поля, "
+                + "их значения и формат JSON.";
+        }
+
+        if (status === 502) {
+            return "Не удалось сформировать карточку. "
+                + "Попробуйте ещё раз или уточните исходные данные.";
+        }
+
+        if (status === 503) {
+            return "Сервис генерации временно недоступен. "
+                + "Обратитесь к администратору.";
+        }
+
+        if (status === 504) {
+            return "Генерация заняла слишком много времени. "
+                + "Попробуйте ещё раз.";
+        }
+
+        return "Не удалось выполнить запрос. Попробуйте позже.";
+    }
+
+    function renderCard(card) {
+        currentCard = card;
+        $("seo-title").textContent = card.seo_title;
+        $("seo-description").textContent = card.seo_description;
+        $("commercial-block").textContent = card.commercial_block;
+        $("title-counter").textContent = `${card.seo_title.length} / 70 символов`;
+        $("description-counter").textContent = `${card.seo_description.length} / 800–1200 символов`;
+
+        const specs = $("specifications");
+        specs.replaceChildren();
+        for (const [name, value] of Object.entries(card.specifications)) {
+            const row = document.createElement("tr");
+            const nameCell = document.createElement("td");
+            const valueCell = document.createElement("td");
+            nameCell.textContent = name;
+            valueCell.textContent = value || "Данных нет";
+            row.append(nameCell, valueCell);
+            specs.appendChild(row);
+        }
+
+        const queries = $("search-queries");
+        queries.replaceChildren();
+        for (const query of card.search_queries) {
+            const item = document.createElement("li");
+            item.textContent = query;
+            queries.appendChild(item);
+        }
+
+        const warnings = $("warnings");
+        warnings.replaceChildren();
+        const messages = [
+            "AI-сгенерированные тексты требуют проверки перед публикацией.",
+            ...(card.warnings || []),
+            ...(card.missing_fields || []).map((field) => field.reason)
+        ];
+        for (const message of new Set(messages)) {
+            const item = document.createElement("div");
+            item.className = "warning";
+            item.textContent = message;
+            warnings.appendChild(item);
+        }
+
+        $("placeholder").hidden = true;
+        $("result").hidden = false;
+        $("copy-toolbar").hidden = false;
+    }
+
+    async function generateCard() {
+        if (isGenerating) return;
+        clearResult();
+
+        let product;
+        try {
+            product = JSON.parse($("product-input").value);
+        } catch {
+            showError("Некорректный JSON. Проверьте кавычки, запятые и скобки.");
+            return;
+        }
+
+        isGenerating = true;
+        const button = $("generate-btn");
+        button.disabled = true;
+        button.textContent = "Генерация...";
+        setStatus("Ожидаем ответ модели...");
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(product)
+            });
+
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+                throw new Error("Сервер вернул неожиданный ответ. Попробуйте позже.");
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(formatError(response.status, data.detail));
+            }
+
+            renderCard(data);
+            setStatus("Карточка успешно создана.", true);
+        } catch (error) {
+            showError(error instanceof Error ? error.message : "Не удалось выполнить запрос. Попробуйте позже.");
+        } finally {
+            isGenerating = false;
+            button.disabled = false;
+            button.textContent = "Сгенерировать";
+        }
+    }
+
+    function toMarkdown(card) {
+        const specs = Object.entries(card.specifications)
+            .map(([name, value]) => `- **${name}:** ${value || "Данных нет"}`)
+            .join("\n");
+        const queries = card.search_queries.map((item) => `- ${item}`).join("\n");
+        const missing = (card.missing_fields || [])
+            .map((item) => `- ${item.reason}`).join("\n");
+        const warnings = (card.warnings || [])
+            .map((item) => `- ${item}`).join("\n");
+
+        return [
+            `# ${card.seo_title}`,
+            "## SEO-описание", card.seo_description,
+            "## Характеристики", specs,
+            "## Поисковые запросы", queries,
+            "## Коммерческий блок", card.commercial_block,
+            ...(missing ? ["## Недостающие данные", missing] : []),
+            ...(warnings ? ["## Предупреждения", warnings] : [])
+        ].join("\n\n");
+    }
+
+    function toPlainText(card) {
+        const specs = Object.entries(card.specifications)
+            .map(([name, value]) => `${name}: ${value || "Данных нет"}`)
+            .join("\n");
+        const queries = card.search_queries.map((item) => `- ${item}`).join("\n");
+        const missing = (card.missing_fields || [])
+            .map((item) => `- ${item.reason}`).join("\n");
+        const warnings = (card.warnings || [])
+            .map((item) => `- ${item}`).join("\n");
+
+        return [
+            card.seo_title, "",
+            "SEO-описание", card.seo_description, "",
+            "Характеристики", specs, "",
+            "Поисковые запросы", queries, "",
+            "Коммерческий блок", card.commercial_block,
+            ...(missing ? ["", "Недостающие данные", missing] : []),
+            ...(warnings ? ["", "Предупреждения", warnings] : [])
+        ].join("\n");
+    }
+
+    async function copyCard(format) {
+        if (!currentCard) return;
+        const buttonId = copyButtonIds[format];
+        if (!buttonId) return;
+
+        let text;
+        switch (format) {
+            case "json":
+                text = JSON.stringify(currentCard, null, 2);
+                break;
+            case "markdown":
+                text = toMarkdown(currentCard);
+                break;
+            case "text":
+                text = toPlainText(currentCard);
+                break;
+            default:
+                return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(text);
+            hideError();
+            const button = $(buttonId);
+            clearTimeout(copyTimers.get(format));
+            button.textContent = "✓ Скопировано!";
+            button.classList.add("copied");
+            setStatus("Содержимое скопировано в буфер обмена.", true);
+
+            const timer = setTimeout(() => {
+                button.textContent = copyLabels[format];
+                button.classList.remove("copied");
+                copyTimers.delete(format);
+            }, 2000);
+            copyTimers.set(format, timer);
+        } catch (error) {
+            console.error("Clipboard error:", error);
+            showError("Не удалось скопировать текст. Проверьте разрешения браузера.");
+        }
+    }
+
+    $("generate-btn").addEventListener("click", generateCard);
+    $("example-btn").addEventListener("click", () => {
+        if (isGenerating) return;
+        $("product-input").value = JSON.stringify(exampleProduct, null, 2);
+        clearResult();
+    });
+    $("copy-text-btn").addEventListener("click", () => copyCard("text"));
+    $("copy-md-btn").addEventListener("click", () => copyCard("markdown"));
+    $("copy-json-btn").addEventListener("click", () => copyCard("json"));
+
+    $("example-btn").click();
+</script>
+</body>
+</html>

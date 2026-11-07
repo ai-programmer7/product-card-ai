@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from openai import APIError, AsyncOpenAI
+from openai import APIError, APITimeoutError, AsyncOpenAI
 from pydantic import SecretStr
 
 
@@ -15,6 +15,10 @@ class LLMClient(Protocol):
 
 class LLMClientError(Exception):
     """Error during communication with an LLM provider."""
+
+
+class LLMTimeoutError(LLMClientError):
+    """LLM provider request timed out."""
 
 
 class GroqLLMClient:
@@ -57,10 +61,39 @@ class GroqLLMClient:
                         "content": user_prompt,
                     },
                 ],
-                response_format={"type": "json_object"},
-                temperature=0.2,
-                max_completion_tokens=1800,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "product_card_content",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "seo_title": {"type": "string"},
+                                "seo_description": {"type": "string"},
+                                "search_queries": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "commercial_block": {"type": "string"},
+                            },
+                            "required": [
+                                "seo_title",
+                                "seo_description",
+                                "search_queries",
+                                "commercial_block",
+                            ],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                reasoning_effort="low",
+                temperature=0.1,
+                max_completion_tokens=4000,
             )
+
+        except APITimeoutError as exc:
+            raise LLMTimeoutError("LLM provider request timed out") from exc
 
         except APIError as exc:
             raise LLMClientError("Failed to communicate with LLM provider") from exc
