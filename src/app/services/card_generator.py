@@ -53,7 +53,7 @@ class CardGenerationService:
 
         # Без характеристик и технического описания
         # невозможно подготовить достоверную карточку.
-        if not product.specs and not product.description:
+        if not any(product.specs.values()) and not product.description:
             raise InsufficientProductDataError(
                 missing_fields=missing_fields,
             )
@@ -115,13 +115,22 @@ class CardGenerationService:
                 )
             )
 
-        if not product.specs:
+        if not any(product.specs.values()):
             missing_fields.append(
                 MissingField(
                     field="specs",
                     reason="Технические характеристики не предоставлены",
                 )
             )
+
+        for name, value in product.specs.items():
+            if not value:
+                missing_fields.append(
+                    MissingField(
+                        field=f"specs.{name}",
+                        reason=f"{name}: данных нет",
+                    )
+                )
 
         return missing_fields
 
@@ -159,7 +168,9 @@ class CardGenerationService:
         return ProductCard(
             seo_title=content.seo_title,
             seo_description=content.seo_description,
-            specifications=product.specs.copy(),
+            specifications={
+                name: value or "Данных нет" for name, value in product.specs.items()
+            },
             search_queries=content.search_queries,
             commercial_block=content.commercial_block,
             missing_fields=missing_fields,

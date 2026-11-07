@@ -174,3 +174,24 @@ async def test_invalid_response_after_retry_raises_error() -> None:
         await service.generate(product)
 
     assert fake_llm.calls == 2
+
+
+@pytest.mark.asyncio
+async def test_blank_specs_block_generation() -> None:
+    fake = FakeLLMClient(responses=[])
+    with pytest.raises(InsufficientProductDataError):
+        await CardGenerationService(fake).generate(
+            ProductInput(name="Gauge", specs={"range": "   "})
+        )
+    assert fake.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_blank_spec_is_reported_and_exported() -> None:
+    fake = FakeLLMClient(responses=[make_valid_response()])
+    product = ProductInput(name="Gauge", specs={"range": " ", "size": "100 mm"})
+    card = await CardGenerationService(fake).generate(product)
+    assert card.specifications == {"range": "Данных нет", "size": "100 mm"}
+    assert "specs.range" in {field.field for field in card.missing_fields}
+    assert card.warnings
+    assert product.specs["range"] == ""
